@@ -4,7 +4,7 @@
 -- File       : Wavefiles-p.vhd
 -- Author     : Alexander Lindert <alexander_lindert at gmx.at>
 -- Created    : 2008-08-19
--- Last update: 2008-08-23
+-- Last update: 2008-09-19
 -- Platform   : 
 -------------------------------------------------------------------------------
 -- Description: This package can read or write VHDL signals from or to wave files.
@@ -13,24 +13,24 @@
 -- Format used from this link:
 -- http://www.lightlink.com/tjweber/StripWav/Canon.html
 -------------------------------------------------------------------------------
- --    GNU Lesser General Public License Version 3
- --    =============================================
- --    Copyright 2005 by Sun Microsystems, Inc.
- --    901 San Antonio Road, Palo Alto, CA 94303, USA
- --
- --    This library is free software; you can redistribute it and/or
- --    modify it under the terms of the GNU Lesser General Public
- --    License version 3, as published by the Free Software Foundation.
- --
- --    This library is distributed in the hope that it will be useful,
- --    but WITHOUT ANY WARRANTY; without even the implied warranty of
- --    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- --    Lesser General Public License for more details.
- --
- --    You should have received a copy of the GNU Lesser General Public
- --    License along with this library; if not, write to the Free Software
- --    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- --    MA  02111-1307  USA
+--    GNU Lesser General Public License Version 3
+--    =============================================
+--    Copyright 2005 by Sun Microsystems, Inc.
+--    901 San Antonio Road, Palo Alto, CA 94303, USA
+--
+--    This library is free software; you can redistribute it and/or
+--    modify it under the terms of the GNU Lesser General Public
+--    License version 3, as published by the Free Software Foundation.
+--
+--    This library is distributed in the hope that it will be useful,
+--    but WITHOUT ANY WARRANTY; without even the implied warranty of
+--    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+--    Lesser General Public License for more details.
+--
+--    You should have received a copy of the GNU Lesser General Public
+--    License along with this library; if not, write to the Free Software
+--    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+--    MA  02111-1307  USA
 -------------------------------------------------------------------------------
 -- Revisions  :
 -- Date        Version  
@@ -100,14 +100,12 @@ package body WaveFiles is
   end;
 
   function ReadDword(file WaveFileHandle : aFileHandle) return integer is
-    variable Ret  : integer := 0;
-    variable temp : natural := 0;
-    variable ch   : character;
+    variable Ret : integer := 0;
+    variable ch  : character;
   begin
     for i in 0 to 3 loop
       read(WaveFileHandle, ch);
-      temp := natural(character'pos(ch));
-      Ret  := Ret + temp*2**(8*i);
+      Ret := Ret + character'pos(ch)*2**(8*i);
     end loop;
     return Ret;
   end;
@@ -161,6 +159,45 @@ package body WaveFiles is
     FileInfo.DataSize := ReadDword(WaveFileHandle);
   end;
 
+
+  function ReadSignedDword(file WaveFileHandle : aFileHandle) return integer is
+    variable Ret : integer := 0;
+    variable ch  : character;
+  begin
+    for i in 0 to 3 loop
+      read(WaveFileHandle, ch);
+      Ret := Ret + character'pos(ch)*2**(8*i);
+    end loop;
+    return Ret;
+  end;
+
+  function ReadSignedWord(file WaveFileHandle : aFileHandle) return integer is
+    variable Ret : integer := 0;
+    variable ch  : character;
+  begin
+    for i in 0 to 1 loop
+      read(WaveFileHandle, ch);
+
+      Ret := Ret + character'pos(ch)*2**(8*i);
+    end loop;
+    if Ret >= 2**15 then
+      Ret := Ret - 2**16;
+    end if;
+    return Ret;
+  end;
+
+  function ReadSignedByte(file WaveFileHandle : aFileHandle) return integer is
+    variable Ret : integer := 0;
+    variable ch  : character;
+  begin
+    read(WaveFileHandle, ch);
+    Ret := character'pos(ch);
+    if Ret >= 2**7 then
+      Ret := Ret - 2**8;
+    end if;
+    return Ret;
+  end;
+  
   procedure ReadSample(file WaveFileHandle    :       aFileHandle;
                        variable Sample        : out   integer;
                        variable RemainingData : inout natural;
@@ -177,14 +214,13 @@ package body WaveFiles is
     else
       case DataTyp is
         when PCM8 =>
-          read(WaveFileHandle, ch);
-          Ret           := character'pos(ch);
+          Ret           := ReadSignedByte(WaveFileHandle);
           RemainingData := RemainingData-1;
         when PCM16LE =>
-          Ret           := ReadWord(WaveFileHandle);
+          Ret           := ReadSignedWord(WaveFileHandle);
           RemainingData := RemainingData-2;
         when PCM32LE =>
-          Ret           := ReadDword(WaveFileHandle);
+          Ret           := ReadSignedDword(WaveFileHandle);
           RemainingData := RemainingData-4;
       end case;
     end if;
